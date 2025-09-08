@@ -12,3 +12,4 @@ C:\Users\diego\MiProyectoCSharp\obj\Debug\net9.0-windows\refint\MiProyectoCSharp
 C:\Users\diego\MiProyectoCSharp\obj\Debug\net9.0-windows\MiProyectoCSharp.pdb
 C:\Users\diego\MiProyectoCSharp\obj\Debug\net9.0-windows\MiProyectoCSharp.genruntimeconfig.cache
 C:\Users\diego\MiProyectoCSharp\obj\Debug\net9.0-windows\ref\MiProyectoCSharp.dll
+C:\Users\diego\MiProyectoCSharp\obj\Debug\net9.0-windows\MiProyectoCSharp.sourcelink.json

@@ -23,7 +23,7 @@ namespace SimuladorTrafico
                      ControlStyles.DoubleBuffer | 
                      ControlStyles.ResizeRedraw, true);
             
-            Size = new Size(30, 90);
+            Size = new Size(20, 60);
             
             _timerParpadeo = new System.Windows.Forms.Timer { Interval = 800 };
             _timerParpadeo.Tick += (s, e) => 
@@ -85,14 +85,14 @@ namespace SimuladorTrafico
 
         private void DibujarLuces(Graphics g)
         {
-            int radio = 12;
+            int radio = 8;
             int centroX = Width / 2;
 
-            // Posiciones de las luces ajustadas para el semáforo más grande
+            // Posiciones de las luces ajustadas para el semáforo más pequeño
             Point[] posiciones = {
-                new Point(centroX, 20),  // Rojo
-                new Point(centroX, 45),  // Amarillo
-                new Point(centroX, 70)   // Verde
+                new Point(centroX, 12),  // Rojo
+                new Point(centroX, 30),  // Amarillo
+                new Point(centroX, 48)   // Verde
             };
 
             Color[] colores = {

@@ -64,12 +64,16 @@ namespace SimuladorTrafico
             panelBorder.Controls.Add(_panelSimulacion);
             _panelSimulacion.Location = new Point(2, 2);
 
-            // Solo 2 semáforos optimizados - uno para cada eje
-            _controlador.SemaforoNorteSur.Location = new Point(360, 250);    // Lado derecho para tráfico Norte-Sur
-            _controlador.SemaforoEsteOeste.Location = new Point(250, 190);   // Lado superior para tráfico Este-Oeste
+            // 4 semáforos - uno para cada dirección
+            _controlador.SemaforoNorte.Location = new Point(360, 180);    // Esquina noreste
+            _controlador.SemaforoSur.Location = new Point(260, 380);     // Esquina suroeste  
+            _controlador.SemaforoEste.Location = new Point(380, 330);    // Esquina sureste
+            _controlador.SemaforoOeste.Location = new Point(180, 230);   // Esquina noroeste
 
-            _panelSimulacion.Controls.Add(_controlador.SemaforoNorteSur);
-            _panelSimulacion.Controls.Add(_controlador.SemaforoEsteOeste);
+            _panelSimulacion.Controls.Add(_controlador.SemaforoNorte);
+            _panelSimulacion.Controls.Add(_controlador.SemaforoSur);
+            _panelSimulacion.Controls.Add(_controlador.SemaforoEste);
+            _panelSimulacion.Controls.Add(_controlador.SemaforoOeste);
 
             // Grupo de controles
             _groupControles = new GroupBox
@@ -265,10 +269,20 @@ namespace SimuladorTrafico
             {
                 using (var pen = new Pen(Color.FromArgb(100, Color.Red), 2))
                 {
+                    // Carriles principales
                     g.DrawRectangle(pen, _controlador.ZonaDetencionNorte);
                     g.DrawRectangle(pen, _controlador.ZonaDetencionSur);
                     g.DrawRectangle(pen, _controlador.ZonaDetencionEste);
                     g.DrawRectangle(pen, _controlador.ZonaDetencionOeste);
+                }
+                
+                using (var pen = new Pen(Color.FromArgb(100, Color.Orange), 2))
+                {
+                    // Carriles secundarios
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionNorte2);
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionSur2);
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionEste2);
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionOeste2);
                 }
 
                 using (var pen = new Pen(Color.FromArgb(100, Color.Blue), 2))
@@ -276,12 +290,14 @@ namespace SimuladorTrafico
                     g.DrawRectangle(pen, _controlador.Interseccion);
                 }
                 
-                // Mostrar estado de semáforos
+                // Mostrar estado de los 4 semáforos
                 using (var font = new Font("Segoe UI", 8))
                 using (var brush = new SolidBrush(Color.White))
                 {
-                    g.DrawString($"N-S: {_controlador.SemaforoNorteSur.Estado}", font, brush, 10, 30);
-                    g.DrawString($"E-O: {_controlador.SemaforoEsteOeste.Estado}", font, brush, 10, 50);
+                    g.DrawString($"N: {_controlador.SemaforoNorte.Estado}", font, brush, 10, 30);
+                    g.DrawString($"S: {_controlador.SemaforoSur.Estado}", font, brush, 10, 45);
+                    g.DrawString($"E: {_controlador.SemaforoEste.Estado}", font, brush, 10, 60);
+                    g.DrawString($"O: {_controlador.SemaforoOeste.Estado}", font, brush, 10, 75);
                 }
             }
 

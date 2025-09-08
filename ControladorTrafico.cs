@@ -9,8 +9,10 @@ namespace SimuladorTrafico
     public class ControladorTrafico
     {
         public List<Vehiculo> Vehiculos { get; private set; }
-        public Semaforo SemaforoNorteSur { get; private set; }
-        public Semaforo SemaforoEsteOeste { get; private set; }
+        public Semaforo SemaforoNorte { get; private set; }
+        public Semaforo SemaforoSur { get; private set; }
+        public Semaforo SemaforoEste { get; private set; }
+        public Semaforo SemaforoOeste { get; private set; }
         
         private System.Windows.Forms.Timer _timerSimulacion;
         private System.Windows.Forms.Timer _timerSemaforos;
@@ -26,6 +28,12 @@ namespace SimuladorTrafico
         public Rectangle ZonaDetencionEste { get; private set; }
         public Rectangle ZonaDetencionOeste { get; private set; }
         
+        // Zonas de detención para el segundo carril
+        public Rectangle ZonaDetencionNorte2 { get; private set; }
+        public Rectangle ZonaDetencionSur2 { get; private set; }
+        public Rectangle ZonaDetencionEste2 { get; private set; }
+        public Rectangle ZonaDetencionOeste2 { get; private set; }
+        
         public event EventHandler<string>? LogEvent;
 
         public ControladorTrafico()
@@ -36,19 +44,29 @@ namespace SimuladorTrafico
             // Configurar áreas
             Interseccion = new Rectangle(250, 250, 100, 100);
             
-            // Zonas de detención ANTES del primer paso peatonal (donde deben detenerse los vehículos)
-            ZonaDetencionNorte = new Rectangle(270, 200, 15, 30);   // Antes paso peatonal Norte Y=240
-            ZonaDetencionSur = new Rectangle(320, 370, 15, 30);     // Antes paso peatonal Sur Y=340  
-            ZonaDetencionEste = new Rectangle(200, 270, 30, 15);    // Antes paso peatonal Oeste X=240
-            ZonaDetencionOeste = new Rectangle(370, 320, 30, 15);   // Antes paso peatonal Este X=340   
+            // Zonas de detención ANTES del primer paso peatonal - CARRIL 1 (derecho en cada dirección)
+            ZonaDetencionNorte = new Rectangle(270, 200, 15, 30);   // Norte carril derecho (X=270-285)
+            ZonaDetencionSur = new Rectangle(315, 370, 15, 30);     // Sur carril derecho (X=315-330)
+            ZonaDetencionEste = new Rectangle(200, 270, 30, 15);    // Este carril inferior (Y=270-285)
+            ZonaDetencionOeste = new Rectangle(370, 315, 30, 15);   // Oeste carril superior (Y=315-330)
             
-            // Crear semáforos
-            SemaforoNorteSur = new Semaforo();
-            SemaforoEsteOeste = new Semaforo();
+            // Zonas de detención ANTES del primer paso peatonal - CARRIL 2 (izquierdo en cada dirección)
+            ZonaDetencionNorte2 = new Rectangle(315, 200, 15, 30);  // Norte carril izquierdo (X=315-330)
+            ZonaDetencionSur2 = new Rectangle(270, 370, 15, 30);    // Sur carril izquierdo (X=270-285)
+            ZonaDetencionEste2 = new Rectangle(200, 315, 30, 15);   // Este carril superior (Y=315-330)
+            ZonaDetencionOeste2 = new Rectangle(370, 270, 30, 15);  // Oeste carril inferior (Y=270-285)   
             
-            // Estados iniciales
-            SemaforoNorteSur.Estado = EstadoSemaforo.Verde;
-            SemaforoEsteOeste.Estado = EstadoSemaforo.Rojo;
+            // Crear 4 semáforos
+            SemaforoNorte = new Semaforo();
+            SemaforoSur = new Semaforo();
+            SemaforoEste = new Semaforo();
+            SemaforoOeste = new Semaforo();
+            
+            // Estados iniciales - Norte-Sur verde, Este-Oeste rojo
+            SemaforoNorte.Estado = EstadoSemaforo.Verde;
+            SemaforoSur.Estado = EstadoSemaforo.Verde;
+            SemaforoEste.Estado = EstadoSemaforo.Rojo;
+            SemaforoOeste.Estado = EstadoSemaforo.Rojo;
             
             // Timers simples
             _timerSimulacion = new System.Windows.Forms.Timer { Interval = 100 };
@@ -136,6 +154,40 @@ namespace SimuladorTrafico
             };
         }
 
+        private bool EstaEnCualquierZonaDetencion(Vehiculo vehiculo, DireccionVehiculo direccion)
+        {
+            var rectVehiculo = new Rectangle(vehiculo.Posicion.X - 15, vehiculo.Posicion.Y - 15, 30, 30);
+            
+            return direccion switch
+            {
+                DireccionVehiculo.Norte => 
+                    rectVehiculo.IntersectsWith(ZonaDetencionNorte) || 
+                    rectVehiculo.IntersectsWith(ZonaDetencionNorte2) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionNorte) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionNorte2),
+                    
+                DireccionVehiculo.Sur => 
+                    rectVehiculo.IntersectsWith(ZonaDetencionSur) || 
+                    rectVehiculo.IntersectsWith(ZonaDetencionSur2) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionSur) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionSur2),
+                    
+                DireccionVehiculo.Este => 
+                    rectVehiculo.IntersectsWith(ZonaDetencionEste) || 
+                    rectVehiculo.IntersectsWith(ZonaDetencionEste2) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionEste) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionEste2),
+                    
+                DireccionVehiculo.Oeste => 
+                    rectVehiculo.IntersectsWith(ZonaDetencionOeste) || 
+                    rectVehiculo.IntersectsWith(ZonaDetencionOeste2) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionOeste) ||
+                    EstaAcercandose(vehiculo, ZonaDetencionOeste2),
+                    
+                _ => false
+            };
+        }
+
         private bool DebeDetenersePorSemaforo(Vehiculo vehiculo)
         {
             // Si ya entró a la intersección una vez, puede continuar sin importar el semáforo
@@ -150,42 +202,24 @@ namespace SimuladorTrafico
             if (YaCruzoInterseccion(vehiculo))
                 return false;
             
-            EstadoSemaforo estado;
-            Rectangle zona;
-            
-            switch (vehiculo.Direccion)
+            EstadoSemaforo estado = vehiculo.Direccion switch
             {
-                case DireccionVehiculo.Norte:
-                    estado = SemaforoNorteSur.Estado;
-                    zona = ZonaDetencionNorte;
-                    break;
-                case DireccionVehiculo.Sur:
-                    estado = SemaforoNorteSur.Estado;
-                    zona = ZonaDetencionSur;
-                    break;
-                case DireccionVehiculo.Este:
-                    estado = SemaforoEsteOeste.Estado;
-                    zona = ZonaDetencionEste;
-                    break;
-                case DireccionVehiculo.Oeste:
-                    estado = SemaforoEsteOeste.Estado;
-                    zona = ZonaDetencionOeste;
-                    break;
-                default:
-                    return false;
-            }
+                DireccionVehiculo.Norte => SemaforoNorte.Estado,
+                DireccionVehiculo.Sur => SemaforoSur.Estado,
+                DireccionVehiculo.Este => SemaforoEste.Estado,
+                DireccionVehiculo.Oeste => SemaforoOeste.Estado,
+                _ => EstadoSemaforo.Rojo
+            };
             
             // Si el semáforo está verde, no detenerse
             if (estado == EstadoSemaforo.Verde)
                 return false;
             
-            // Verificar si está en la zona de detención o acercándose
-            var rectVehiculo = new Rectangle(vehiculo.Posicion.X - 15, vehiculo.Posicion.Y - 15, 30, 30);
-            bool enZona = rectVehiculo.IntersectsWith(zona);
-            bool acercandose = EstaAcercandose(vehiculo, zona);
+            // Verificar si está en cualquiera de las zonas de detención para su dirección
+            bool enZonaDetencion = EstaEnCualquierZonaDetencion(vehiculo, vehiculo.Direccion);
             
-            // Solo detenerse si el semáforo está rojo Y está en la zona ANTES de la intersección
-            bool debeDetenerse = (estado == EstadoSemaforo.Rojo || estado == EstadoSemaforo.Amarillo) && (enZona || acercandose);
+            // Solo detenerse si el semáforo está rojo/amarillo Y está en alguna zona
+            bool debeDetenerse = (estado == EstadoSemaforo.Rojo || estado == EstadoSemaforo.Amarillo) && enZonaDetencion;
             
             // Solo log una vez cuando empieza a detenerse
             if (debeDetenerse && vehiculo.Estado != EstadoVehiculo.Detenido)
@@ -265,8 +299,10 @@ namespace SimuladorTrafico
                 case 0: // Norte-Sur Verde (6 segundos)
                     if (_contadorFase >= 2) // 6 segundos
                     {
-                        SemaforoNorteSur.Estado = EstadoSemaforo.Amarillo;
-                        SemaforoEsteOeste.Estado = EstadoSemaforo.Rojo;
+                        SemaforoNorte.Estado = EstadoSemaforo.Amarillo;
+                        SemaforoSur.Estado = EstadoSemaforo.Amarillo;
+                        SemaforoEste.Estado = EstadoSemaforo.Rojo;
+                        SemaforoOeste.Estado = EstadoSemaforo.Rojo;
                         LogEvent?.Invoke(this, "🚦 Norte-Sur: AMARILLO | Este-Oeste: ROJO");
                         _faseActual = 1;
                         _contadorFase = 0;
@@ -278,8 +314,10 @@ namespace SimuladorTrafico
                     {
                         if (!HayVehiculosEnInterseccion())
                         {
-                            SemaforoNorteSur.Estado = EstadoSemaforo.Rojo;
-                            SemaforoEsteOeste.Estado = EstadoSemaforo.Verde;
+                            SemaforoNorte.Estado = EstadoSemaforo.Rojo;
+                            SemaforoSur.Estado = EstadoSemaforo.Rojo;
+                            SemaforoEste.Estado = EstadoSemaforo.Verde;
+                            SemaforoOeste.Estado = EstadoSemaforo.Verde;
                             LogEvent?.Invoke(this, "🚦 Norte-Sur: ROJO | Este-Oeste: VERDE");
                             _faseActual = 2;
                             _contadorFase = 0;
@@ -294,8 +332,10 @@ namespace SimuladorTrafico
                 case 2: // Este-Oeste Verde (6 segundos)
                     if (_contadorFase >= 2) // 6 segundos
                     {
-                        SemaforoNorteSur.Estado = EstadoSemaforo.Rojo;
-                        SemaforoEsteOeste.Estado = EstadoSemaforo.Amarillo;
+                        SemaforoNorte.Estado = EstadoSemaforo.Rojo;
+                        SemaforoSur.Estado = EstadoSemaforo.Rojo;
+                        SemaforoEste.Estado = EstadoSemaforo.Amarillo;
+                        SemaforoOeste.Estado = EstadoSemaforo.Amarillo;
                         LogEvent?.Invoke(this, "🚦 Norte-Sur: ROJO | Este-Oeste: AMARILLO");
                         _faseActual = 3;
                         _contadorFase = 0;
@@ -307,8 +347,10 @@ namespace SimuladorTrafico
                     {
                         if (!HayVehiculosEnInterseccion())
                         {
-                            SemaforoNorteSur.Estado = EstadoSemaforo.Verde;
-                            SemaforoEsteOeste.Estado = EstadoSemaforo.Rojo;
+                            SemaforoNorte.Estado = EstadoSemaforo.Verde;
+                            SemaforoSur.Estado = EstadoSemaforo.Verde;
+                            SemaforoEste.Estado = EstadoSemaforo.Rojo;
+                            SemaforoOeste.Estado = EstadoSemaforo.Rojo;
                             LogEvent?.Invoke(this, "🚦 Norte-Sur: VERDE | Este-Oeste: ROJO");
                             _faseActual = 0;
                             _contadorFase = 0;
@@ -321,9 +363,11 @@ namespace SimuladorTrafico
                     break;
             }
             
-            // Forzar redibujado de los semáforos
-            SemaforoNorteSur.Invalidate();
-            SemaforoEsteOeste.Invalidate();
+            // Forzar redibujado de los 4 semáforos
+            SemaforoNorte.Invalidate();
+            SemaforoSur.Invalidate();
+            SemaforoEste.Invalidate();
+            SemaforoOeste.Invalidate();
         }
 
         private void GenerarVehiculo()
