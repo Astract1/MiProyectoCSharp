@@ -9,14 +9,20 @@ namespace SimuladorTrafico
     public class ControladorTrafico
     {
         public List<Vehiculo> Vehiculos { get; private set; }
+        public List<Peaton> Peatones { get; private set; }
         public Semaforo SemaforoNorte { get; private set; }
         public Semaforo SemaforoSur { get; private set; }
         public Semaforo SemaforoEste { get; private set; }
         public Semaforo SemaforoOeste { get; private set; }
         
+        // Semáforos peatonales
+        public SemaforoPeaton SemaforoPeatonNorteSur { get; private set; }
+        public SemaforoPeaton SemaforoPeatonEsteOeste { get; private set; }
+        
         private System.Windows.Forms.Timer _timerSimulacion;
         private System.Windows.Forms.Timer _timerSemaforos;
         private System.Windows.Forms.Timer _timerGeneracion;
+        private System.Windows.Forms.Timer _timerGeneracionPeatones;
         private Random _random;
         private int _contadorTiempo = 0;
         private int _faseActual = 0; // 0=Norte-Sur Verde, 1=Norte-Sur Amarillo, 2=Este-Oeste Verde, 3=Este-Oeste Amarillo
@@ -39,6 +45,7 @@ namespace SimuladorTrafico
         public ControladorTrafico()
         {
             Vehiculos = new List<Vehiculo>();
+            Peatones = new List<Peaton>();
             _random = new Random();
             
             // Configurar áreas
@@ -61,17 +68,25 @@ namespace SimuladorTrafico
             ZonaDetencionEste2 = new Rectangle(200, 270, 30, 15);   // Este carril (mismo que Este)
             ZonaDetencionOeste2 = new Rectangle(370, 315, 30, 15);  // Oeste carril (mismo que Oeste)   
             
-            // Crear 4 semáforos
+            // Crear 4 semáforos para vehículos
             SemaforoNorte = new Semaforo();
             SemaforoSur = new Semaforo();
             SemaforoEste = new Semaforo();
             SemaforoOeste = new Semaforo();
+            
+            // Crear 2 semáforos peatonales
+            SemaforoPeatonNorteSur = new SemaforoPeaton(DireccionPeaton.NorteSur);
+            SemaforoPeatonEsteOeste = new SemaforoPeaton(DireccionPeaton.EsteOeste);
             
             // Estados iniciales - Norte-Sur verde, Este-Oeste rojo
             SemaforoNorte.Estado = EstadoSemaforo.Verde;
             SemaforoSur.Estado = EstadoSemaforo.Verde;
             SemaforoEste.Estado = EstadoSemaforo.Rojo;
             SemaforoOeste.Estado = EstadoSemaforo.Rojo;
+            
+            // Estados iniciales peatonales - cuando vehículos N-S están en verde, peatones E-O pueden cruzar
+            SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Rojo;   // No pueden cruzar N-S
+            SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde; // Pueden cruzar E-O
             
             // Timers simples
             _timerSimulacion = new System.Windows.Forms.Timer { Interval = 100 };
@@ -82,6 +97,9 @@ namespace SimuladorTrafico
             
             _timerGeneracion = new System.Windows.Forms.Timer { Interval = 2000 };
             _timerGeneracion.Tick += (s, e) => GenerarVehiculo();
+            
+            _timerGeneracionPeatones = new System.Windows.Forms.Timer { Interval = 4000 }; // Menos frecuente
+            _timerGeneracionPeatones.Tick += (s, e) => GenerarPeaton();
         }
 
         public void IniciarSimulacion()
@@ -89,7 +107,8 @@ namespace SimuladorTrafico
             _timerSimulacion.Start();
             _timerSemaforos.Start();
             _timerGeneracion.Start();
-            LogEvent?.Invoke(this, "🚦 Simulación iniciada");
+            _timerGeneracionPeatones.Start();
+            LogEvent?.Invoke(this, "🚦 Simulación iniciada con peatones");
         }
 
         public void DetenerSimulacion()
@@ -97,11 +116,13 @@ namespace SimuladorTrafico
             _timerSimulacion.Stop();
             _timerSemaforos.Stop();
             _timerGeneracion.Stop();
+            _timerGeneracionPeatones.Stop();
             LogEvent?.Invoke(this, "⏹️ Simulación detenida");
         }
 
         private void ActualizarSimulacion()
         {
+            // Actualizar vehículos
             for (int i = Vehiculos.Count - 1; i >= 0; i--)
             {
                 var vehiculo = Vehiculos[i];
@@ -120,7 +141,13 @@ namespace SimuladorTrafico
                     debeDetenerse = true;
                     vehiculo.Estado = EstadoVehiculo.Detenido;
                 }
-                // Verificar colisiones
+                // Verificar colisiones con peatones
+                else if (HayPeatonEnElCamino(vehiculo))
+                {
+                    debeDetenerse = true;
+                    vehiculo.Estado = EstadoVehiculo.Detenido;
+                }
+                // Verificar colisiones con otros vehículos
                 else if (HayVehiculoAdelante(vehiculo))
                 {
                     debeDetenerse = true;
@@ -142,6 +169,32 @@ namespace SimuladorTrafico
                     vehiculo.Posicion.Y < -50 || vehiculo.Posicion.Y > 650)
                 {
                     Vehiculos.RemoveAt(i);
+                }
+            }
+            
+            // Actualizar peatones
+            for (int i = Peatones.Count - 1; i >= 0; i--)
+            {
+                var peaton = Peatones[i];
+                
+                // Si está esperando y el semáforo está en verde Y no hay vehículos cruzando, iniciar cruce
+                if (peaton.Estado == EstadoPeaton.Esperando && PuedeCruzar(peaton) && EsSeguroParaCruzar(peaton))
+                {
+                    peaton.IniciarCruce();
+                    LogEvent?.Invoke(this, $"🚶 Peatón {peaton.Id} inicia cruce {peaton.Direccion}");
+                }
+                
+                // Mover peatón si está cruzando
+                if (peaton.Estado == EstadoPeaton.Cruzando)
+                {
+                    peaton.Mover();
+                }
+                
+                // Eliminar peatones que terminaron
+                if (peaton.Estado == EstadoPeaton.Terminado)
+                {
+                    Peatones.RemoveAt(i);
+                    LogEvent?.Invoke(this, $"🚶 Peatón {peaton.Id} completó cruce");
                 }
             }
         }
@@ -314,9 +367,72 @@ namespace SimuladorTrafico
             return false;
         }
 
+        private bool HayPeatonEnElCamino(Vehiculo vehiculo)
+        {
+            // Crear rectángulo del vehículo con un poco de espacio adicional para detección temprana
+            var rectVehiculo = new Rectangle(vehiculo.Posicion.X - 20, vehiculo.Posicion.Y - 20, 40, 40);
+            
+            foreach (var peaton in Peatones)
+            {
+                // Solo verificar peatones que están cruzando
+                if (peaton.Estado != EstadoPeaton.Cruzando) continue;
+                
+                // Crear rectángulo del peatón
+                var rectPeaton = new Rectangle(peaton.Posicion.X - 10, peaton.Posicion.Y - 10, 20, 20);
+                
+                // Verificar si hay intersección
+                if (rectVehiculo.IntersectsWith(rectPeaton))
+                {
+                    // Verificar si el vehículo y peatón están en trayectorias que se cruzan
+                    if (TrayectoriasSeCruzan(vehiculo, peaton))
+                    {
+                        // Solo detener si el peatón está adelante en la dirección del vehículo
+                        if (PeatonEstaAdelante(vehiculo, peaton))
+                        {
+                            LogEvent?.Invoke(this, $"🚨 Vehículo {vehiculo.Direccion} se detiene por peatón {peaton.Id} cruzando");
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        private bool TrayectoriasSeCruzan(Vehiculo vehiculo, Peaton peaton)
+        {
+            // Vehículos Norte-Sur pueden cruzarse con peatones Este-Oeste
+            if ((vehiculo.Direccion == DireccionVehiculo.Norte || vehiculo.Direccion == DireccionVehiculo.Sur) &&
+                peaton.Direccion == DireccionPeaton.EsteOeste)
+                return true;
+                
+            // Vehículos Este-Oeste pueden cruzarse con peatones Norte-Sur
+            if ((vehiculo.Direccion == DireccionVehiculo.Este || vehiculo.Direccion == DireccionVehiculo.Oeste) &&
+                peaton.Direccion == DireccionPeaton.NorteSur)
+                return true;
+                
+            return false;
+        }
+        
+        private bool PeatonEstaAdelante(Vehiculo vehiculo, Peaton peaton)
+        {
+            return vehiculo.Direccion switch
+            {
+                DireccionVehiculo.Norte => peaton.Posicion.Y < vehiculo.Posicion.Y,
+                DireccionVehiculo.Sur => peaton.Posicion.Y > vehiculo.Posicion.Y,
+                DireccionVehiculo.Este => peaton.Posicion.X > vehiculo.Posicion.X,
+                DireccionVehiculo.Oeste => peaton.Posicion.X < vehiculo.Posicion.X,
+                _ => false
+            };
+        }
+
         private bool HayVehiculosEnInterseccion()
         {
             return Vehiculos.Any(v => v.EstaEnInterseccion(Interseccion));
+        }
+        
+        private bool HayPeatonesCruzando()
+        {
+            return Peatones.Any(p => p.Estado == EstadoPeaton.Cruzando);
         }
 
         private void CambiarSemaforos()
@@ -332,7 +448,9 @@ namespace SimuladorTrafico
                         SemaforoSur.Estado = EstadoSemaforo.Amarillo;
                         SemaforoEste.Estado = EstadoSemaforo.Rojo;
                         SemaforoOeste.Estado = EstadoSemaforo.Rojo;
-                        LogEvent?.Invoke(this, "🚦 Norte-Sur: AMARILLO | Este-Oeste: ROJO");
+                        // Peatones E-O siguen pudiendo cruzar en amarillo
+                        SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                        LogEvent?.Invoke(this, "🚦 Norte-Sur: AMARILLO | Este-Oeste: ROJO | Peatones E-O: VERDE");
                         _faseActual = 1;
                         _contadorFase = 0;
                     }
@@ -341,19 +459,22 @@ namespace SimuladorTrafico
                 case 1: // Norte-Sur Amarillo (3 segundos + espera)
                     if (_contadorFase >= 1) // 3 segundos
                     {
-                        if (!HayVehiculosEnInterseccion())
+                        if (!HayVehiculosEnInterseccion() && !HayPeatonesCruzando())
                         {
                             SemaforoNorte.Estado = EstadoSemaforo.Rojo;
                             SemaforoSur.Estado = EstadoSemaforo.Rojo;
                             SemaforoEste.Estado = EstadoSemaforo.Verde;
                             SemaforoOeste.Estado = EstadoSemaforo.Verde;
-                            LogEvent?.Invoke(this, "🚦 Norte-Sur: ROJO | Este-Oeste: VERDE");
+                            // Cambiar semáforos peatonales: ahora N-S pueden cruzar
+                            SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Verde;
+                            SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Rojo;
+                            LogEvent?.Invoke(this, "🚦 Norte-Sur: ROJO | Este-Oeste: VERDE | Peatones N-S: VERDE");
                             _faseActual = 2;
                             _contadorFase = 0;
                         }
                         else
                         {
-                            LogEvent?.Invoke(this, "⏳ Esperando que se libere la intersección...");
+                            LogEvent?.Invoke(this, "⏳ Esperando que se libere la intersección y terminen de cruzar los peatones...");
                         }
                     }
                     break;
@@ -365,7 +486,9 @@ namespace SimuladorTrafico
                         SemaforoSur.Estado = EstadoSemaforo.Rojo;
                         SemaforoEste.Estado = EstadoSemaforo.Amarillo;
                         SemaforoOeste.Estado = EstadoSemaforo.Amarillo;
-                        LogEvent?.Invoke(this, "🚦 Norte-Sur: ROJO | Este-Oeste: AMARILLO");
+                        // Peatones N-S siguen pudiendo cruzar en amarillo
+                        SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Verde;
+                        LogEvent?.Invoke(this, "🚦 Norte-Sur: ROJO | Este-Oeste: AMARILLO | Peatones N-S: VERDE");
                         _faseActual = 3;
                         _contadorFase = 0;
                     }
@@ -374,29 +497,34 @@ namespace SimuladorTrafico
                 case 3: // Este-Oeste Amarillo (3 segundos + espera)
                     if (_contadorFase >= 1) // 3 segundos
                     {
-                        if (!HayVehiculosEnInterseccion())
+                        if (!HayVehiculosEnInterseccion() && !HayPeatonesCruzando())
                         {
                             SemaforoNorte.Estado = EstadoSemaforo.Verde;
                             SemaforoSur.Estado = EstadoSemaforo.Verde;
                             SemaforoEste.Estado = EstadoSemaforo.Rojo;
                             SemaforoOeste.Estado = EstadoSemaforo.Rojo;
-                            LogEvent?.Invoke(this, "🚦 Norte-Sur: VERDE | Este-Oeste: ROJO");
+                            // Cambiar semáforos peatonales: ahora E-O pueden cruzar
+                            SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Rojo;
+                            SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                            LogEvent?.Invoke(this, "🚦 Norte-Sur: VERDE | Este-Oeste: ROJO | Peatones E-O: VERDE");
                             _faseActual = 0;
                             _contadorFase = 0;
                         }
                         else
                         {
-                            LogEvent?.Invoke(this, "⏳ Esperando que se libere la intersección...");
+                            LogEvent?.Invoke(this, "⏳ Esperando que se libere la intersección y terminen de cruzar los peatones...");
                         }
                     }
                     break;
             }
             
-            // Forzar redibujado de los 4 semáforos
+            // Forzar redibujado de los 4 semáforos de vehículos y 2 peatonales
             SemaforoNorte.Invalidate();
             SemaforoSur.Invalidate();
             SemaforoEste.Invalidate();
             SemaforoOeste.Invalidate();
+            SemaforoPeatonNorteSur.Invalidate();
+            SemaforoPeatonEsteOeste.Invalidate();
         }
 
         private void GenerarVehiculo()
@@ -455,6 +583,93 @@ namespace SimuladorTrafico
             LogEvent?.Invoke(this, $"🚗 Nuevo vehículo {direccion} generado en carril {nombreCarril} ({posicion.X},{posicion.Y})");
         }
 
+        private void GenerarPeaton()
+        {
+            if (Peatones.Count >= 4) return; // Máximo 4 peatones simultáneamente
+
+            // Elegir aleatoriamente una dirección de cruce
+            DireccionPeaton direccion = _random.Next(2) == 0 ? DireccionPeaton.NorteSur : DireccionPeaton.EsteOeste;
+            
+            Point puntoInicio, puntoFin;
+            
+            if (direccion == DireccionPeaton.NorteSur)
+            {
+                // Cruce Norte-Sur: desde las esquinas oeste hacia las esquinas este
+                if (_random.Next(2) == 0)
+                {
+                    // Cruce norte: de oeste a este
+                    puntoInicio = new Point(230, 240);
+                    puntoFin = new Point(370, 240);
+                }
+                else
+                {
+                    // Cruce sur: de oeste a este  
+                    puntoInicio = new Point(230, 360);
+                    puntoFin = new Point(370, 360);
+                }
+            }
+            else
+            {
+                // Cruce Este-Oeste: desde las esquinas norte hacia las esquinas sur
+                if (_random.Next(2) == 0)
+                {
+                    // Cruce oeste: de norte a sur
+                    puntoInicio = new Point(240, 230);
+                    puntoFin = new Point(240, 370);
+                }
+                else
+                {
+                    // Cruce este: de norte a sur
+                    puntoInicio = new Point(360, 230); 
+                    puntoFin = new Point(360, 370);
+                }
+            }
+
+            var peaton = new Peaton(direccion, puntoInicio, puntoFin);
+            Peatones.Add(peaton);
+            
+            LogEvent?.Invoke(this, $"🚶 Nuevo peatón {peaton.Id} esperando para cruzar {direccion}");
+        }
+
+        private bool PuedeCruzar(Peaton peaton)
+        {
+            return peaton.Direccion switch
+            {
+                DireccionPeaton.NorteSur => SemaforoPeatonNorteSur.Estado == EstadoSemaforoPeaton.Verde,
+                DireccionPeaton.EsteOeste => SemaforoPeatonEsteOeste.Estado == EstadoSemaforoPeaton.Verde,
+                _ => false
+            };
+        }
+        
+        private bool EsSeguroParaCruzar(Peaton peaton)
+        {
+            // Verificar que no haya vehículos en la intersección o acercándose que puedan interferir
+            foreach (var vehiculo in Vehiculos)
+            {
+                // Verificar si el vehículo está en trayectoria de colisión con el peatón
+                if (TrayectoriasSeCruzan(vehiculo, peaton))
+                {
+                    // Si el vehículo está en la intersección o muy cerca, no es seguro cruzar
+                    if (vehiculo.EstaEnInterseccion(Interseccion))
+                    {
+                        return false;
+                    }
+                    
+                    // Verificar distancia del vehículo a la zona de cruce
+                    var distanciaSegura = 80;
+                    var distanciaVehiculo = Math.Abs(vehiculo.Posicion.X - peaton.Posicion.X) + 
+                                          Math.Abs(vehiculo.Posicion.Y - peaton.Posicion.Y);
+                    
+                    if (distanciaVehiculo < distanciaSegura && vehiculo.Estado == EstadoVehiculo.Moviendose)
+                    {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
         public void DibujarEscena(Graphics g, Rectangle area)
         {
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
@@ -472,6 +687,12 @@ namespace SimuladorTrafico
             foreach (var vehiculo in Vehiculos)
             {
                 vehiculo.Dibujar(g);
+            }
+            
+            // Dibujar peatones
+            foreach (var peaton in Peatones)
+            {
+                peaton.Dibujar(g);
             }
         }
 
@@ -586,6 +807,7 @@ namespace SimuladorTrafico
             _timerSimulacion?.Dispose();
             _timerSemaforos?.Dispose();
             _timerGeneracion?.Dispose();
+            _timerGeneracionPeatones?.Dispose();
         }
     }
 }

@@ -28,4 +28,23 @@ namespace SimuladorTrafico
         Detenido,
         EnInterseccion
     }
+
+    public enum EstadoSemaforoPeaton
+    {
+        Rojo,    // No cruzar (mano roja)
+        Verde    // Cruzar (muñeco caminando)
+    }
+
+    public enum DireccionPeaton
+    {
+        NorteSur,  // Cruza de norte a sur o viceversa
+        EsteOeste  // Cruza de este a oeste o viceversa
+    }
+
+    public enum EstadoPeaton
+    {
+        Esperando,
+        Cruzando,
+        Terminado
+    }
 }

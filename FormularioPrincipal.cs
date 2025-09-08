@@ -15,6 +15,7 @@ namespace SimuladorTrafico
         private Button _btnDetener;
         private Button _btnLimpiar;
         private Label _lblVehiculos;
+        private Label _lblPeatones;
         private Label _lblEstado;
         private GroupBox _groupEstadisticas;
         private GroupBox _groupControles;
@@ -64,7 +65,7 @@ namespace SimuladorTrafico
             panelBorder.Controls.Add(_panelSimulacion);
             _panelSimulacion.Location = new Point(2, 2);
 
-            // 4 semáforos - uno para cada dirección
+            // 4 semáforos para vehículos - uno para cada dirección
             _controlador.SemaforoNorte.Location = new Point(360, 180);    // Esquina noreste
             _controlador.SemaforoSur.Location = new Point(260, 380);     // Esquina suroeste  
             _controlador.SemaforoEste.Location = new Point(380, 330);    // Esquina sureste
@@ -74,6 +75,13 @@ namespace SimuladorTrafico
             _panelSimulacion.Controls.Add(_controlador.SemaforoSur);
             _panelSimulacion.Controls.Add(_controlador.SemaforoEste);
             _panelSimulacion.Controls.Add(_controlador.SemaforoOeste);
+
+            // 2 semáforos peatonales
+            _controlador.SemaforoPeatonNorteSur.Location = new Point(210, 300);   // Lado oeste para cruce N-S
+            _controlador.SemaforoPeatonEsteOeste.Location = new Point(300, 210);  // Lado norte para cruce E-O
+
+            _panelSimulacion.Controls.Add(_controlador.SemaforoPeatonNorteSur);
+            _panelSimulacion.Controls.Add(_controlador.SemaforoPeatonEsteOeste);
 
             // Grupo de controles
             _groupControles = new GroupBox
@@ -98,7 +106,7 @@ namespace SimuladorTrafico
             {
                 Text = "📊 Estadísticas en Tiempo Real",
                 Location = new Point(650, 160),
-                Size = new Size(320, 100),
+                Size = new Size(320, 120), // Aumentar altura para peatones
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
             };
@@ -112,22 +120,31 @@ namespace SimuladorTrafico
                 ForeColor = Color.FromArgb(33, 150, 243)
             };
 
+            _lblPeatones = new Label
+            {
+                Text = "🚶 Peatones en cruce: 0",
+                Location = new Point(20, 55),
+                Size = new Size(280, 25),
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(76, 175, 80)
+            };
+
             _lblEstado = new Label
             {
                 Text = "⏹️ Estado: Detenido",
-                Location = new Point(20, 55),
+                Location = new Point(20, 80),
                 Size = new Size(280, 25),
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.FromArgb(244, 67, 54)
             };
 
-            _groupEstadisticas.Controls.AddRange(new Control[] { _lblVehiculos, _lblEstado });
+            _groupEstadisticas.Controls.AddRange(new Control[] { _lblVehiculos, _lblPeatones, _lblEstado });
 
             // Área de log mejorada
             var lblLog = new Label
             {
                 Text = "📝 Registro de Eventos",
-                Location = new Point(650, 280),
+                Location = new Point(650, 300),
                 Size = new Size(200, 25),
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
@@ -135,8 +152,8 @@ namespace SimuladorTrafico
 
             _txtLog = new TextBox
             {
-                Location = new Point(650, 310),
-                Size = new Size(320, 310),
+                Location = new Point(650, 330),
+                Size = new Size(320, 290), // Ajustar altura
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
                 ReadOnly = true,
@@ -246,6 +263,7 @@ namespace SimuladorTrafico
         private void ActualizarUI()
         {
             _lblVehiculos.Text = $"🚗 Vehículos en circulación: {_controlador.Vehiculos.Count}";
+            _lblPeatones.Text = $"🚶 Peatones en cruce: {_controlador.Peatones.Count}";
             // Solo redibujar si hay cambios significativos
             _panelSimulacion.Invalidate();
         }
@@ -290,14 +308,19 @@ namespace SimuladorTrafico
                     g.DrawRectangle(pen, _controlador.Interseccion);
                 }
                 
-                // Mostrar estado de los 4 semáforos
+                // Mostrar estado de los 4 semáforos de vehículos y 2 peatonales
                 using (var font = new Font("Segoe UI", 8))
                 using (var brush = new SolidBrush(Color.White))
                 {
-                    g.DrawString($"N: {_controlador.SemaforoNorte.Estado}", font, brush, 10, 30);
-                    g.DrawString($"S: {_controlador.SemaforoSur.Estado}", font, brush, 10, 45);
-                    g.DrawString($"E: {_controlador.SemaforoEste.Estado}", font, brush, 10, 60);
-                    g.DrawString($"O: {_controlador.SemaforoOeste.Estado}", font, brush, 10, 75);
+                    g.DrawString($"Vehículos:", font, brush, 10, 30);
+                    g.DrawString($"N: {_controlador.SemaforoNorte.Estado}", font, brush, 10, 45);
+                    g.DrawString($"S: {_controlador.SemaforoSur.Estado}", font, brush, 10, 60);
+                    g.DrawString($"E: {_controlador.SemaforoEste.Estado}", font, brush, 10, 75);
+                    g.DrawString($"O: {_controlador.SemaforoOeste.Estado}", font, brush, 10, 90);
+                    
+                    g.DrawString($"Peatones:", font, brush, 10, 110);
+                    g.DrawString($"N-S: {_controlador.SemaforoPeatonNorteSur.Estado}", font, brush, 10, 125);
+                    g.DrawString($"E-O: {_controlador.SemaforoPeatonEsteOeste.Estado}", font, brush, 10, 140);
                 }
             }
 
