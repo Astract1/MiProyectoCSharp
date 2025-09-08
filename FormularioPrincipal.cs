@@ -269,20 +269,20 @@ namespace SimuladorTrafico
             {
                 using (var pen = new Pen(Color.FromArgb(100, Color.Red), 2))
                 {
-                    // Carriles principales
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionNorte);
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionSur);
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionEste);
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionOeste);
+                    // Zonas de detención principales (cada carril tiene una sola dirección)
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionNorte);  // Norte: X=315-330, Y=370-400
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionSur);    // Sur: X=270-285, Y=200-230
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionEste);   // Este: X=200-230, Y=270-285
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionOeste);  // Oeste: X=370-400, Y=315-330
                 }
                 
                 using (var pen = new Pen(Color.FromArgb(100, Color.Orange), 2))
                 {
-                    // Carriles secundarios
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionNorte2);
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionSur2);
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionEste2);
-                    g.DrawRectangle(pen, _controlador.ZonaDetencionOeste2);
+                    // Zonas de detención duplicadas (mismo carril)
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionNorte2);  // Norte: X=315-330, Y=370-400
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionSur2);    // Sur: X=270-285, Y=200-230
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionEste2);   // Este: X=200-230, Y=270-285
+                    g.DrawRectangle(pen, _controlador.ZonaDetencionOeste2);  // Oeste: X=370-400, Y=315-330
                 }
 
                 using (var pen = new Pen(Color.FromArgb(100, Color.Blue), 2))

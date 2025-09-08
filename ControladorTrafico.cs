@@ -44,17 +44,22 @@ namespace SimuladorTrafico
             // Configurar áreas
             Interseccion = new Rectangle(250, 250, 100, 100);
             
-            // Zonas de detención ANTES del primer paso peatonal - CARRIL 1 (derecho en cada dirección)
-            ZonaDetencionNorte = new Rectangle(270, 200, 15, 30);   // Norte carril derecho (X=270-285)
-            ZonaDetencionSur = new Rectangle(315, 370, 15, 30);     // Sur carril derecho (X=315-330)
-            ZonaDetencionEste = new Rectangle(200, 270, 30, 15);    // Este carril inferior (Y=270-285)
-            ZonaDetencionOeste = new Rectangle(370, 315, 30, 15);   // Oeste carril superior (Y=315-330)
+            // Zonas de detención ANTES del primer paso peatonal - UN CARRIL POR DIRECCIÓN
+            // Intersección: (250,250) a (350,350)
+            // Norte (X=275): viene desde Y=580, zona después de Y=350
+            ZonaDetencionNorte = new Rectangle(315, 370, 15, 30);   
+            // Sur (X=325): viene desde Y=20, zona antes de Y=250
+            ZonaDetencionSur = new Rectangle(270, 200, 15, 30);     
+            // Este (Y=275): viene desde X=20, zona antes de X=250
+            ZonaDetencionEste = new Rectangle(200, 270, 30, 15);    
+            // Oeste (Y=325): viene desde X=580, zona después de X=350
+            ZonaDetencionOeste = new Rectangle(370, 315, 30, 15);   
             
-            // Zonas de detención ANTES del primer paso peatonal - CARRIL 2 (izquierdo en cada dirección)
-            ZonaDetencionNorte2 = new Rectangle(315, 200, 15, 30);  // Norte carril izquierdo (X=315-330)
-            ZonaDetencionSur2 = new Rectangle(270, 370, 15, 30);    // Sur carril izquierdo (X=270-285)
-            ZonaDetencionEste2 = new Rectangle(200, 315, 30, 15);   // Este carril superior (Y=315-330)
-            ZonaDetencionOeste2 = new Rectangle(370, 270, 30, 15);  // Oeste carril inferior (Y=270-285)   
+            // Zonas de detención duplicadas para compatibilidad (mismo carril)
+            ZonaDetencionNorte2 = new Rectangle(315, 370, 15, 30);  // Norte carril (mismo que Norte)
+            ZonaDetencionSur2 = new Rectangle(270, 200, 15, 30);    // Sur carril (mismo que Sur)
+            ZonaDetencionEste2 = new Rectangle(200, 270, 30, 15);   // Este carril (mismo que Este)
+            ZonaDetencionOeste2 = new Rectangle(370, 315, 30, 15);  // Oeste carril (mismo que Oeste)   
             
             // Crear 4 semáforos
             SemaforoNorte = new Semaforo();
@@ -160,24 +165,28 @@ namespace SimuladorTrafico
             
             return direccion switch
             {
+                // Vehículos que van hacia el Norte (desde Y=580 hacia Y=0)
                 DireccionVehiculo.Norte => 
                     rectVehiculo.IntersectsWith(ZonaDetencionNorte) || 
                     rectVehiculo.IntersectsWith(ZonaDetencionNorte2) ||
                     EstaAcercandose(vehiculo, ZonaDetencionNorte) ||
                     EstaAcercandose(vehiculo, ZonaDetencionNorte2),
                     
+                // Vehículos que van hacia el Sur (desde Y=20 hacia Y=600)
                 DireccionVehiculo.Sur => 
                     rectVehiculo.IntersectsWith(ZonaDetencionSur) || 
                     rectVehiculo.IntersectsWith(ZonaDetencionSur2) ||
                     EstaAcercandose(vehiculo, ZonaDetencionSur) ||
                     EstaAcercandose(vehiculo, ZonaDetencionSur2),
                     
+                // Vehículos que van hacia el Este (desde X=20 hacia X=600)
                 DireccionVehiculo.Este => 
                     rectVehiculo.IntersectsWith(ZonaDetencionEste) || 
                     rectVehiculo.IntersectsWith(ZonaDetencionEste2) ||
                     EstaAcercandose(vehiculo, ZonaDetencionEste) ||
                     EstaAcercandose(vehiculo, ZonaDetencionEste2),
                     
+                // Vehículos que van hacia el Oeste (desde X=580 hacia X=0)
                 DireccionVehiculo.Oeste => 
                     rectVehiculo.IntersectsWith(ZonaDetencionOeste) || 
                     rectVehiculo.IntersectsWith(ZonaDetencionOeste2) ||
@@ -236,10 +245,18 @@ namespace SimuladorTrafico
             
             return vehiculo.Direccion switch
             {
+                // Norte: viene desde abajo (Y=580), zona en Y=200-230, detectar cuando está en Y=230-270
                 DireccionVehiculo.Norte => vehiculo.Posicion.Y > zona.Bottom && vehiculo.Posicion.Y < zona.Bottom + distancia,
+                
+                // Sur: viene desde arriba (Y=20), zona en Y=370-400, detectar cuando está en Y=330-370
                 DireccionVehiculo.Sur => vehiculo.Posicion.Y < zona.Top && vehiculo.Posicion.Y > zona.Top - distancia,
+                
+                // Este: viene desde izquierda (X=20), zona en X=200-230, detectar cuando está en X=160-200
                 DireccionVehiculo.Este => vehiculo.Posicion.X < zona.Left && vehiculo.Posicion.X > zona.Left - distancia,
+                
+                // Oeste: viene desde derecha (X=580), zona en X=370-400, detectar cuando está en X=410-450
                 DireccionVehiculo.Oeste => vehiculo.Posicion.X > zona.Right && vehiculo.Posicion.X < zona.Right + distancia,
+                
                 _ => false
             };
         }
@@ -253,13 +270,25 @@ namespace SimuladorTrafico
                 // Solo verificar vehículos en la misma dirección y carril
                 if (vehiculo.Direccion != otro.Direccion) continue;
                 
-                // Verificar si están en el mismo carril
+                // Verificar si están en el mismo carril (cada carril tiene una sola dirección)
                 bool mismoCarril = vehiculo.Direccion switch
                 {
-                    DireccionVehiculo.Norte or DireccionVehiculo.Sur => 
-                        Math.Abs(vehiculo.Posicion.X - otro.Posicion.X) < 30,
-                    DireccionVehiculo.Este or DireccionVehiculo.Oeste => 
-                        Math.Abs(vehiculo.Posicion.Y - otro.Posicion.Y) < 30,
+                    DireccionVehiculo.Norte => 
+                        // Carril Norte (X=275)
+                        Math.Abs(vehiculo.Posicion.X - 275) < 15 && Math.Abs(otro.Posicion.X - 275) < 15,
+                        
+                    DireccionVehiculo.Sur => 
+                        // Carril Sur (X=325)
+                        Math.Abs(vehiculo.Posicion.X - 325) < 15 && Math.Abs(otro.Posicion.X - 325) < 15,
+                        
+                    DireccionVehiculo.Este => 
+                        // Carril Este (Y=275)
+                        Math.Abs(vehiculo.Posicion.Y - 275) < 15 && Math.Abs(otro.Posicion.Y - 275) < 15,
+                        
+                    DireccionVehiculo.Oeste => 
+                        // Carril Oeste (Y=325)
+                        Math.Abs(vehiculo.Posicion.Y - 325) < 15 && Math.Abs(otro.Posicion.Y - 325) < 15,
+                        
                     _ => false
                 };
                 
@@ -374,24 +403,56 @@ namespace SimuladorTrafico
         {
             if (Vehiculos.Count >= 8) return;
 
-            var direcciones = new[] { DireccionVehiculo.Norte, DireccionVehiculo.Sur, DireccionVehiculo.Este, DireccionVehiculo.Oeste };
-            var direccion = direcciones[_random.Next(direcciones.Length)];
+            // Generar vehículos en ambos carriles pero con direcciones correctas
             var tipo = TipoVehiculo.Auto;
+            Point posicion;
+            DireccionVehiculo direccion;
             
-            // Carriles separados correctamente
-            Point posicion = direccion switch
+            // Elegir aleatoriamente entre los 4 carriles
+            int carril = _random.Next(4);
+            
+            switch (carril)
             {
-                DireccionVehiculo.Norte => new Point(275, 580),  // Carril derecho subiendo
-                DireccionVehiculo.Sur => new Point(325, 20),    // Carril derecho bajando  
-                DireccionVehiculo.Este => new Point(20, 275),   // Carril inferior hacia derecha
-                DireccionVehiculo.Oeste => new Point(580, 325), // Carril superior hacia izquierda
-                _ => new Point(300, 300)
-            };
+                case 0: // Carril Norte (X=275) - solo hacia el Norte
+                    direccion = DireccionVehiculo.Norte;
+                    posicion = new Point(275, 580);
+                    break;
+                    
+                case 1: // Carril Sur (X=325) - solo hacia el Sur  
+                    direccion = DireccionVehiculo.Sur;
+                    posicion = new Point(325, 20);
+                    break;
+                    
+                case 2: // Carril Este (Y=275) - solo hacia el Este
+                    direccion = DireccionVehiculo.Este;
+                    posicion = new Point(20, 275);
+                    break;
+                    
+                case 3: // Carril Oeste (Y=325) - solo hacia el Oeste
+                    direccion = DireccionVehiculo.Oeste;
+                    posicion = new Point(580, 325);
+                    break;
+                    
+                default:
+                    direccion = DireccionVehiculo.Norte;
+                    posicion = new Point(275, 580);
+                    break;
+            }
 
             var vehiculo = new Vehiculo(direccion, posicion, tipo);
             Vehiculos.Add(vehiculo);
             
-            LogEvent?.Invoke(this, $"🚗 Nuevo vehículo {direccion} generado en ({posicion.X},{posicion.Y})");
+            // Determinar en qué carril se generó
+            string nombreCarril = carril switch
+            {
+                0 => "Norte (X=275)",
+                1 => "Sur (X=325)", 
+                2 => "Este (Y=275)",
+                3 => "Oeste (Y=325)",
+                _ => "desconocido"
+            };
+            
+            LogEvent?.Invoke(this, $"🚗 Nuevo vehículo {direccion} generado en carril {nombreCarril} ({posicion.X},{posicion.Y})");
         }
 
         public void DibujarEscena(Graphics g, Rectangle area)
