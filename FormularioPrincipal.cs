@@ -19,6 +19,16 @@ namespace SimuladorTrafico
         private Label _lblEstado;
         private GroupBox _groupEstadisticas;
         private GroupBox _groupControles;
+        private ComboBox _cmbConfiguracionVial;
+        private Label _lblConfiguracionVial;
+        
+        // Controles manuales de semáforos
+        private GroupBox _groupSemaforosManual;
+        private CheckBox _chkModoManual;
+        private Button _btnSemaforoNorte;
+        private Button _btnSemaforoSur;
+        private Button _btnSemaforoEste;
+        private Button _btnSemaforoOeste;
 
         public FormularioPrincipal()
         {
@@ -88,7 +98,7 @@ namespace SimuladorTrafico
             {
                 Text = "🎮 Controles",
                 Location = new Point(650, 20),
-                Size = new Size(320, 120),
+                Size = new Size(320, 160), // Aumentar altura para incluir selector
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
             };
@@ -97,15 +107,36 @@ namespace SimuladorTrafico
             _btnDetener = CrearBoton("⏸️ Pausar", new Point(170, 30), Color.FromArgb(255, 152, 0));
             _btnLimpiar = CrearBoton("🧹 Limpiar Log", new Point(20, 70), Color.FromArgb(96, 125, 139));
 
+            // Configuración vial
+            _lblConfiguracionVial = new Label
+            {
+                Text = "🛣️ Configuración Vial:",
+                Location = new Point(20, 110),
+                Size = new Size(140, 20),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+
+            _cmbConfiguracionVial = new ComboBox
+            {
+                Location = new Point(170, 108),
+                Size = new Size(130, 25),
+                Font = new Font("Segoe UI", 9),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            _cmbConfiguracionVial.Items.Add("🛣️ Doble Vía (↑↓ ←→)");
+            _cmbConfiguracionVial.Items.Add("🚧 Vía Única (↑ ←)");
+            _cmbConfiguracionVial.SelectedIndex = 0; // Doble vía por defecto
+
             _btnDetener.Enabled = false;
 
-            _groupControles.Controls.AddRange(new Control[] { _btnIniciar, _btnDetener, _btnLimpiar });
+            _groupControles.Controls.AddRange(new Control[] { _btnIniciar, _btnDetener, _btnLimpiar, _lblConfiguracionVial, _cmbConfiguracionVial });
 
             // Grupo de estadísticas
             _groupEstadisticas = new GroupBox
             {
                 Text = "📊 Estadísticas en Tiempo Real",
-                Location = new Point(650, 160),
+                Location = new Point(650, 200), // Ajustar posición por altura del grupo controles
                 Size = new Size(320, 120), // Aumentar altura para peatones
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
@@ -140,11 +171,82 @@ namespace SimuladorTrafico
 
             _groupEstadisticas.Controls.AddRange(new Control[] { _lblVehiculos, _lblPeatones, _lblEstado });
 
+            // Grupo de controles manuales de semáforos
+            _groupSemaforosManual = new GroupBox
+            {
+                Text = "🚦 Control Manual de Semáforos",
+                Location = new Point(650, 340),
+                Size = new Size(320, 120),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+
+            _chkModoManual = new CheckBox
+            {
+                Text = "🔧 Modo Manual",
+                Location = new Point(20, 25),
+                Size = new Size(120, 20),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+
+            _btnSemaforoNorte = new Button
+            {
+                Text = "N ↑",
+                Location = new Point(20, 50),
+                Size = new Size(65, 30),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                BackColor = Color.FromArgb(76, 175, 80),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false
+            };
+
+            _btnSemaforoSur = new Button
+            {
+                Text = "S ↓",
+                Location = new Point(90, 50),
+                Size = new Size(65, 30),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                BackColor = Color.FromArgb(76, 175, 80),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false
+            };
+
+            _btnSemaforoEste = new Button
+            {
+                Text = "E →",
+                Location = new Point(160, 50),
+                Size = new Size(65, 30),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                BackColor = Color.FromArgb(244, 67, 54),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false
+            };
+
+            _btnSemaforoOeste = new Button
+            {
+                Text = "O ←",
+                Location = new Point(230, 50),
+                Size = new Size(65, 30),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                BackColor = Color.FromArgb(244, 67, 54),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false
+            };
+
+            _groupSemaforosManual.Controls.AddRange(new Control[] { 
+                _chkModoManual, _btnSemaforoNorte, _btnSemaforoSur, _btnSemaforoEste, _btnSemaforoOeste 
+            });
+
             // Área de log mejorada
             var lblLog = new Label
             {
                 Text = "📝 Registro de Eventos",
-                Location = new Point(650, 300),
+                Location = new Point(650, 480), // Ajustar por grupo de semáforos
                 Size = new Size(200, 25),
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
@@ -152,8 +254,8 @@ namespace SimuladorTrafico
 
             _txtLog = new TextBox
             {
-                Location = new Point(650, 330),
-                Size = new Size(320, 290), // Ajustar altura
+                Location = new Point(650, 510), // Ajustar por grupo de semáforos
+                Size = new Size(320, 180), // Reducir altura
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
                 ReadOnly = true,
@@ -173,6 +275,7 @@ namespace SimuladorTrafico
                 panelBorder,
                 _groupControles,
                 _groupEstadisticas,
+                _groupSemaforosManual,
                 lblLog,
                 _txtLog
             });
@@ -202,6 +305,15 @@ namespace SimuladorTrafico
             _btnIniciar.Click += BtnIniciar_Click;
             _btnDetener.Click += BtnDetener_Click;
             _btnLimpiar.Click += BtnLimpiar_Click;
+            _cmbConfiguracionVial.SelectedIndexChanged += CmbConfiguracionVial_SelectedIndexChanged;
+            
+            // Eventos para control manual de semáforos
+            _chkModoManual.CheckedChanged += ChkModoManual_CheckedChanged;
+            _btnSemaforoNorte.Click += (s, e) => CambiarSemaforoManual("Norte");
+            _btnSemaforoSur.Click += (s, e) => CambiarSemaforoManual("Sur");
+            _btnSemaforoEste.Click += (s, e) => CambiarSemaforoManual("Este");
+            _btnSemaforoOeste.Click += (s, e) => CambiarSemaforoManual("Oeste");
+            
             _controlador.LogEvent += ControladorLogEvent;
 
             // Evento para cerrar la aplicación correctamente
@@ -229,6 +341,94 @@ namespace SimuladorTrafico
         private void BtnLimpiar_Click(object? sender, EventArgs e)
         {
             _txtLog.Clear();
+        }
+
+        private void CmbConfiguracionVial_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            var nuevaConfiguracion = _cmbConfiguracionVial.SelectedIndex == 0 
+                ? TipoConfiguracionVial.DobleVia 
+                : TipoConfiguracionVial.UnicaVia;
+                
+            _controlador.CambiarConfiguracionVial(nuevaConfiguracion);
+            ActualizarVisibilidadBotonesSemaforos();
+        }
+
+        private void ChkModoManual_CheckedChanged(object? sender, EventArgs e)
+        {
+            bool modoManual = _chkModoManual.Checked;
+            _controlador.CambiarModoManual(modoManual);
+            
+            // Habilitar/deshabilitar botones según el modo
+            _btnSemaforoNorte.Enabled = modoManual;
+            _btnSemaforoSur.Enabled = modoManual;
+            _btnSemaforoEste.Enabled = modoManual;
+            _btnSemaforoOeste.Enabled = modoManual;
+            
+            ActualizarVisibilidadBotonesSemaforos();
+        }
+
+        private void CambiarSemaforoManual(string direccion)
+        {
+            _controlador.CambiarSemaforoManual(direccion);
+            ActualizarColoresBotonesSemaforos();
+        }
+
+        private void ActualizarVisibilidadBotonesSemaforos()
+        {
+            if (_controlador.ConfiguracionVial == TipoConfiguracionVial.UnicaVia)
+            {
+                // En vía única, solo mostrar Norte y Oeste
+                _btnSemaforoNorte.Visible = true;
+                _btnSemaforoSur.Visible = false;
+                _btnSemaforoEste.Visible = false;
+                _btnSemaforoOeste.Visible = true;
+            }
+            else
+            {
+                // En doble vía, mostrar todos
+                _btnSemaforoNorte.Visible = true;
+                _btnSemaforoSur.Visible = true;
+                _btnSemaforoEste.Visible = true;
+                _btnSemaforoOeste.Visible = true;
+            }
+            
+            ActualizarColoresBotonesSemaforos();
+        }
+
+        private void ActualizarColoresBotonesSemaforos()
+        {
+            // Actualizar colores según el estado de cada semáforo
+            _btnSemaforoNorte.BackColor = _controlador.SemaforoNorte.Estado switch
+            {
+                EstadoSemaforo.Verde => Color.FromArgb(76, 175, 80),
+                EstadoSemaforo.Amarillo => Color.FromArgb(255, 193, 7),
+                EstadoSemaforo.Rojo => Color.FromArgb(244, 67, 54),
+                _ => Color.Gray
+            };
+
+            _btnSemaforoSur.BackColor = _controlador.SemaforoSur.Estado switch
+            {
+                EstadoSemaforo.Verde => Color.FromArgb(76, 175, 80),
+                EstadoSemaforo.Amarillo => Color.FromArgb(255, 193, 7),
+                EstadoSemaforo.Rojo => Color.FromArgb(244, 67, 54),
+                _ => Color.Gray
+            };
+
+            _btnSemaforoEste.BackColor = _controlador.SemaforoEste.Estado switch
+            {
+                EstadoSemaforo.Verde => Color.FromArgb(76, 175, 80),
+                EstadoSemaforo.Amarillo => Color.FromArgb(255, 193, 7),
+                EstadoSemaforo.Rojo => Color.FromArgb(244, 67, 54),
+                _ => Color.Gray
+            };
+
+            _btnSemaforoOeste.BackColor = _controlador.SemaforoOeste.Estado switch
+            {
+                EstadoSemaforo.Verde => Color.FromArgb(76, 175, 80),
+                EstadoSemaforo.Amarillo => Color.FromArgb(255, 193, 7),
+                EstadoSemaforo.Rojo => Color.FromArgb(244, 67, 54),
+                _ => Color.Gray
+            };
         }
 
         private void ControladorLogEvent(object? sender, string mensaje)
@@ -266,6 +466,9 @@ namespace SimuladorTrafico
             _lblPeatones.Text = $"🚶 Peatones en cruce: {_controlador.Peatones.Count}";
             // Solo redibujar si hay cambios significativos
             _panelSimulacion.Invalidate();
+            
+            // Actualizar colores de botones de semáforos
+            ActualizarColoresBotonesSemaforos();
         }
 
         private void PanelSimulacion_Paint(object? sender, PaintEventArgs e)
@@ -312,15 +515,27 @@ namespace SimuladorTrafico
                 using (var font = new Font("Segoe UI", 8))
                 using (var brush = new SolidBrush(Color.White))
                 {
-                    g.DrawString($"Vehículos:", font, brush, 10, 30);
-                    g.DrawString($"N: {_controlador.SemaforoNorte.Estado}", font, brush, 10, 45);
-                    g.DrawString($"S: {_controlador.SemaforoSur.Estado}", font, brush, 10, 60);
-                    g.DrawString($"E: {_controlador.SemaforoEste.Estado}", font, brush, 10, 75);
-                    g.DrawString($"O: {_controlador.SemaforoOeste.Estado}", font, brush, 10, 90);
+                    g.DrawString($"Modo: {(_controlador.ConfiguracionVial == TipoConfiguracionVial.DobleVia ? "Doble Vía" : "Vía Única")}", font, brush, 10, 30);
+                    g.DrawString($"Vehículos:", font, brush, 10, 45);
                     
-                    g.DrawString($"Peatones:", font, brush, 10, 110);
-                    g.DrawString($"N-S: {_controlador.SemaforoPeatonNorteSur.Estado}", font, brush, 10, 125);
-                    g.DrawString($"E-O: {_controlador.SemaforoPeatonEsteOeste.Estado}", font, brush, 10, 140);
+                    if (_controlador.ConfiguracionVial == TipoConfiguracionVial.DobleVia)
+                    {
+                        g.DrawString($"N(↑): {_controlador.SemaforoNorte.Estado}", font, brush, 10, 60);
+                        g.DrawString($"S(↓): {_controlador.SemaforoSur.Estado}", font, brush, 10, 75);
+                        g.DrawString($"E(→): {_controlador.SemaforoEste.Estado}", font, brush, 10, 90);
+                        g.DrawString($"O(←): {_controlador.SemaforoOeste.Estado}", font, brush, 10, 105);
+                    }
+                    else
+                    {
+                        g.DrawString($"S(↓): {_controlador.SemaforoSur.Estado}", font, brush, 10, 60);
+                        g.DrawString($"O(←): {_controlador.SemaforoOeste.Estado}", font, brush, 10, 75);
+                        g.DrawString($"N: INACTIVO", font, brush, 10, 90);
+                        g.DrawString($"E: INACTIVO", font, brush, 10, 105);
+                    }
+                    
+                    g.DrawString($"Peatones:", font, brush, 10, 125);
+                    g.DrawString($"N-S: {_controlador.SemaforoPeatonNorteSur.Estado}", font, brush, 10, 140);
+                    g.DrawString($"E-O: {_controlador.SemaforoPeatonEsteOeste.Estado}", font, brush, 10, 155);
                 }
             }
 

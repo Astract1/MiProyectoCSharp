@@ -14,6 +14,13 @@ namespace SimuladorTrafico
         public Semaforo SemaforoSur { get; private set; }
         public Semaforo SemaforoEste { get; private set; }
         public Semaforo SemaforoOeste { get; private set; }
+
+        
+        // Nueva propiedad para el tipo de configuración vial
+        public TipoConfiguracionVial ConfiguracionVial { get; private set; } = TipoConfiguracionVial.DobleVia;
+        
+        // Propiedad para control manual de semáforos
+        public bool ModoManual { get; private set; } = false;
         
         // Semáforos peatonales
         public SemaforoPeaton SemaforoPeatonNorteSur { get; private set; }
@@ -118,6 +125,150 @@ namespace SimuladorTrafico
             _timerGeneracion.Stop();
             _timerGeneracionPeatones.Stop();
             LogEvent?.Invoke(this, "⏹️ Simulación detenida");
+        }
+
+        public void CambiarConfiguracionVial(TipoConfiguracionVial nuevaConfiguracion)
+        {
+            ConfiguracionVial = nuevaConfiguracion;
+            
+            // Limpiar vehículos existentes al cambiar modo
+            Vehiculos.Clear();
+            
+            // Ajustar semáforos según el modo
+            if (ConfiguracionVial == TipoConfiguracionVial.UnicaVia)
+            {
+                // En vía única, solo usamos Norte (↑) y Oeste (←)
+                SemaforoNorte.Estado = EstadoSemaforo.Verde;
+                SemaforoSur.Estado = EstadoSemaforo.Rojo; 
+                SemaforoEste.Estado = EstadoSemaforo.Rojo;
+                SemaforoOeste.Estado = EstadoSemaforo.Rojo;
+                
+                // Ocultar semáforos no usados
+                SemaforoSur.Visible = false;
+                SemaforoEste.Visible = false;
+                
+                // Mantener peatones normales
+                SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Rojo;
+                SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                
+                LogEvent?.Invoke(this, "🚧 Cambiado a VÍA ÚNICA: Norte(↑) y Oeste(←)");
+            }
+            else
+            {
+                // Restaurar configuración de doble vía
+                SemaforoNorte.Estado = EstadoSemaforo.Verde;
+                SemaforoSur.Estado = EstadoSemaforo.Verde;
+                SemaforoEste.Estado = EstadoSemaforo.Rojo;
+                SemaforoOeste.Estado = EstadoSemaforo.Rojo;
+                
+                // Mostrar todos los semáforos
+                SemaforoNorte.Visible = true;
+                SemaforoSur.Visible = true;
+                SemaforoEste.Visible = true;
+                SemaforoOeste.Visible = true;
+                
+                // Restaurar peatones normales
+                SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Rojo;
+                SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                
+                LogEvent?.Invoke(this, "🛣️ Cambiado a DOBLE VÍA: ↑↓ Norte-Sur y ←→ Este-Oeste");
+            }
+            
+            // Resetear fase del semáforo
+            _faseActual = 0;
+            _contadorFase = 0;
+        }
+
+        public void CambiarModoManual(bool modoManual)
+        {
+            ModoManual = modoManual;
+            
+            if (modoManual)
+            {
+                // Detener timers automáticos
+                _timerSemaforos.Stop();
+                LogEvent?.Invoke(this, "🔧 MODO MANUAL activado - Control automático de semáforos deshabilitado");
+            }
+            else
+            {
+                // Reactivar timer automático
+                _timerSemaforos.Start();
+                LogEvent?.Invoke(this, "🤖 MODO AUTOMÁTICO activado - Control automático de semáforos habilitado");
+            }
+        }
+
+        public void CambiarSemaforoManual(string direccion)
+        {
+            if (!ModoManual) return;
+
+            EstadoSemaforo nuevoEstado;
+            
+            switch (direccion)
+            {
+                case "Norte":
+                    nuevoEstado = SemaforoNorte.Estado switch
+                    {
+                        EstadoSemaforo.Verde => EstadoSemaforo.Amarillo,
+                        EstadoSemaforo.Amarillo => EstadoSemaforo.Rojo,
+                        EstadoSemaforo.Rojo => EstadoSemaforo.Verde,
+                        _ => EstadoSemaforo.Verde
+                    };
+                    SemaforoNorte.Estado = nuevoEstado;
+                    LogEvent?.Invoke(this, $"🔧 MANUAL - Norte: {nuevoEstado}");
+                    break;
+
+                case "Sur":
+                    nuevoEstado = SemaforoSur.Estado switch
+                    {
+                        EstadoSemaforo.Verde => EstadoSemaforo.Amarillo,
+                        EstadoSemaforo.Amarillo => EstadoSemaforo.Rojo,
+                        EstadoSemaforo.Rojo => EstadoSemaforo.Verde,
+                        _ => EstadoSemaforo.Verde
+                    };
+                    SemaforoSur.Estado = nuevoEstado;
+                    LogEvent?.Invoke(this, $"🔧 MANUAL - Sur: {nuevoEstado}");
+                    break;
+
+                case "Este":
+                    nuevoEstado = SemaforoEste.Estado switch
+                    {
+                        EstadoSemaforo.Verde => EstadoSemaforo.Amarillo,
+                        EstadoSemaforo.Amarillo => EstadoSemaforo.Rojo,
+                        EstadoSemaforo.Rojo => EstadoSemaforo.Verde,
+                        _ => EstadoSemaforo.Verde
+                    };
+                    SemaforoEste.Estado = nuevoEstado;
+                    LogEvent?.Invoke(this, $"🔧 MANUAL - Este: {nuevoEstado}");
+                    break;
+
+                case "Oeste":
+                    nuevoEstado = SemaforoOeste.Estado switch
+                    {
+                        EstadoSemaforo.Verde => EstadoSemaforo.Amarillo,
+                        EstadoSemaforo.Amarillo => EstadoSemaforo.Rojo,
+                        EstadoSemaforo.Rojo => EstadoSemaforo.Verde,
+                        _ => EstadoSemaforo.Verde
+                    };
+                    SemaforoOeste.Estado = nuevoEstado;
+                    LogEvent?.Invoke(this, $"🔧 MANUAL - Oeste: {nuevoEstado}");
+                    break;
+            }
+
+            // Forzar redibujado inmediato de todos los semáforos
+            SemaforoNorte.Invalidate();
+            SemaforoNorte.Update();
+            SemaforoSur.Invalidate();
+            SemaforoSur.Update();
+            SemaforoEste.Invalidate();
+            SemaforoEste.Update();
+            SemaforoOeste.Invalidate();
+            SemaforoOeste.Update();
+            
+            // También actualizar los semáforos peatonales
+            SemaforoPeatonNorteSur.Invalidate();
+            SemaforoPeatonNorteSur.Update();
+            SemaforoPeatonEsteOeste.Invalidate();
+            SemaforoPeatonEsteOeste.Update();
         }
 
         private void ActualizarSimulacion()
@@ -437,24 +588,100 @@ namespace SimuladorTrafico
 
         private void CambiarSemaforos()
         {
+            // No cambiar semáforos si está en modo manual
+            if (ModoManual) return;
+            
             _contadorFase++;
             
-            switch (_faseActual)
+            if (ConfiguracionVial == TipoConfiguracionVial.UnicaVia)
             {
-                case 0: // Norte-Sur Verde (6 segundos)
-                    if (_contadorFase >= 2) // 6 segundos
-                    {
-                        SemaforoNorte.Estado = EstadoSemaforo.Amarillo;
-                        SemaforoSur.Estado = EstadoSemaforo.Amarillo;
-                        SemaforoEste.Estado = EstadoSemaforo.Rojo;
-                        SemaforoOeste.Estado = EstadoSemaforo.Rojo;
-                        // Peatones E-O siguen pudiendo cruzar en amarillo
-                        SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
-                        LogEvent?.Invoke(this, "🚦 Norte-Sur: AMARILLO | Este-Oeste: ROJO | Peatones E-O: VERDE");
-                        _faseActual = 1;
-                        _contadorFase = 0;
-                    }
-                    break;
+                // Usar la lógica original pero solo para Norte y Oeste
+                switch (_faseActual)
+                {
+                    case 0: // Norte Verde (6 segundos)
+                        if (_contadorFase >= 2) // 6 segundos
+                        {
+                            SemaforoNorte.Estado = EstadoSemaforo.Amarillo;
+                            SemaforoOeste.Estado = EstadoSemaforo.Rojo;
+                            SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                            LogEvent?.Invoke(this, "🚦 VÍA ÚNICA - Norte(↑): AMARILLO | Oeste(←): ROJO | Peatones E-O: VERDE");
+                            _faseActual = 1;
+                            _contadorFase = 0;
+                        }
+                        break;
+                        
+                    case 1: // Norte Amarillo (3 segundos + espera)
+                        if (_contadorFase >= 1) // 3 segundos
+                        {
+                            if (!HayVehiculosEnInterseccion() && !HayPeatonesCruzando())
+                            {
+                                SemaforoNorte.Estado = EstadoSemaforo.Rojo;
+                                SemaforoOeste.Estado = EstadoSemaforo.Verde;
+                                SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Verde;
+                                SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Rojo;
+                                LogEvent?.Invoke(this, "🚦 VÍA ÚNICA - Norte(↑): ROJO | Oeste(←): VERDE | Peatones N-S: VERDE");
+                                _faseActual = 2;
+                                _contadorFase = 0;
+                            }
+                            else
+                            {
+                                LogEvent?.Invoke(this, "⏳ Esperando que se libere la intersección...");
+                            }
+                        }
+                        break;
+                        
+                    case 2: // Oeste Verde (6 segundos)
+                        if (_contadorFase >= 2) // 6 segundos
+                        {
+                            SemaforoNorte.Estado = EstadoSemaforo.Rojo;
+                            SemaforoOeste.Estado = EstadoSemaforo.Amarillo;
+                            SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Verde;
+                            LogEvent?.Invoke(this, "🚦 VÍA ÚNICA - Norte(↑): ROJO | Oeste(←): AMARILLO | Peatones N-S: VERDE");
+                            _faseActual = 3;
+                            _contadorFase = 0;
+                        }
+                        break;
+                        
+                    case 3: // Oeste Amarillo (3 segundos + espera)
+                        if (_contadorFase >= 1) // 3 segundos
+                        {
+                            if (!HayVehiculosEnInterseccion() && !HayPeatonesCruzando())
+                            {
+                                SemaforoNorte.Estado = EstadoSemaforo.Verde;
+                                SemaforoOeste.Estado = EstadoSemaforo.Rojo;
+                                SemaforoPeatonNorteSur.Estado = EstadoSemaforoPeaton.Rojo;
+                                SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                                LogEvent?.Invoke(this, "🚦 VÍA ÚNICA - Norte(↑): VERDE | Oeste(←): ROJO | Peatones E-O: VERDE");
+                                _faseActual = 0;
+                                _contadorFase = 0;
+                            }
+                            else
+                            {
+                                LogEvent?.Invoke(this, "⏳ Esperando que se libere la intersección...");
+                            }
+                        }
+                        break;
+                }
+            }
+            else
+            {
+                // Lógica original para doble vía
+                switch (_faseActual)
+                {
+                    case 0: // Norte-Sur Verde (6 segundos)
+                        if (_contadorFase >= 2) // 6 segundos
+                        {
+                            SemaforoNorte.Estado = EstadoSemaforo.Amarillo;
+                            SemaforoSur.Estado = EstadoSemaforo.Amarillo;
+                            SemaforoEste.Estado = EstadoSemaforo.Rojo;
+                            SemaforoOeste.Estado = EstadoSemaforo.Rojo;
+                            // Peatones E-O siguen pudiendo cruzar en amarillo
+                            SemaforoPeatonEsteOeste.Estado = EstadoSemaforoPeaton.Verde;
+                            LogEvent?.Invoke(this, "🚦 Norte-Sur: AMARILLO | Este-Oeste: ROJO | Peatones E-O: VERDE");
+                            _faseActual = 1;
+                            _contadorFase = 0;
+                        }
+                        break;
                     
                 case 1: // Norte-Sur Amarillo (3 segundos + espera)
                     if (_contadorFase >= 1) // 3 segundos
@@ -516,6 +743,7 @@ namespace SimuladorTrafico
                         }
                     }
                     break;
+                }
             }
             
             // Forzar redibujado de los 4 semáforos de vehículos y 2 peatonales
@@ -531,54 +759,95 @@ namespace SimuladorTrafico
         {
             if (Vehiculos.Count >= 8) return;
 
-            // Generar vehículos en ambos carriles pero con direcciones correctas
             var tipo = TipoVehiculo.Auto;
             Point posicion;
             DireccionVehiculo direccion;
+            int carril;
             
-            // Elegir aleatoriamente entre los 4 carriles
-            int carril = _random.Next(4);
-            
-            switch (carril)
+            if (ConfiguracionVial == TipoConfiguracionVial.UnicaVia)
             {
-                case 0: // Carril Norte (X=275) - solo hacia el Norte
-                    direccion = DireccionVehiculo.Norte;
-                    posicion = new Point(275, 580);
-                    break;
-                    
-                case 1: // Carril Sur (X=325) - solo hacia el Sur  
-                    direccion = DireccionVehiculo.Sur;
-                    posicion = new Point(325, 20);
-                    break;
-                    
-                case 2: // Carril Este (Y=275) - solo hacia el Este
-                    direccion = DireccionVehiculo.Este;
-                    posicion = new Point(20, 275);
-                    break;
-                    
-                case 3: // Carril Oeste (Y=325) - solo hacia el Oeste
-                    direccion = DireccionVehiculo.Oeste;
-                    posicion = new Point(580, 325);
-                    break;
-                    
-                default:
-                    direccion = DireccionVehiculo.Norte;
-                    posicion = new Point(275, 580);
-                    break;
+                // VÍA ÚNICA: Solo 2 direcciones
+                // 0: Desde Sur hacia Norte (↑ de abajo hacia arriba)
+                // 1: Desde Este hacia Oeste (← de derecha hacia izquierda)
+                carril = _random.Next(2);
+                
+                switch (carril)
+                {
+                    case 0: // Desde Sur hacia Norte (↑)
+                        direccion = DireccionVehiculo.Norte;
+                        posicion = new Point(275, 580); // Usar el carril correcto X=275
+                        break;
+                        
+                    case 1: // Desde Este hacia Oeste (←)
+                        direccion = DireccionVehiculo.Oeste;
+                        posicion = new Point(580, 325); // Usar el carril correcto Y=325
+                        break;
+                        
+                    default:
+                        direccion = DireccionVehiculo.Norte;
+                        posicion = new Point(275, 580); // Por defecto desde Sur hacia Norte
+                        break;
+                }
+            }
+            else
+            {
+                // DOBLE VÍA: Las 4 direcciones (modo actual)
+                carril = _random.Next(4);
+                
+                switch (carril)
+                {
+                    case 0: // Carril Norte (X=275) - hacia el Norte
+                        direccion = DireccionVehiculo.Norte;
+                        posicion = new Point(275, 580);
+                        break;
+                        
+                    case 1: // Carril Sur (X=325) - hacia el Sur  
+                        direccion = DireccionVehiculo.Sur;
+                        posicion = new Point(325, 20);
+                        break;
+                        
+                    case 2: // Carril Este (Y=275) - hacia el Este
+                        direccion = DireccionVehiculo.Este;
+                        posicion = new Point(20, 275);
+                        break;
+                        
+                    case 3: // Carril Oeste (Y=325) - hacia el Oeste
+                        direccion = DireccionVehiculo.Oeste;
+                        posicion = new Point(580, 325);
+                        break;
+                        
+                    default:
+                        direccion = DireccionVehiculo.Norte;
+                        posicion = new Point(275, 580);
+                        break;
+                }
             }
 
             var vehiculo = new Vehiculo(direccion, posicion, tipo);
             Vehiculos.Add(vehiculo);
             
             // Determinar en qué carril se generó
-            string nombreCarril = carril switch
+            string nombreCarril;
+            if (ConfiguracionVial == TipoConfiguracionVial.UnicaVia)
             {
-                0 => "Norte (X=275)",
-                1 => "Sur (X=325)", 
-                2 => "Este (Y=275)",
-                3 => "Oeste (Y=325)",
-                _ => "desconocido"
-            };
+                nombreCarril = carril switch
+                {
+                    0 => "Sur→Norte (X=275)",
+                    1 => "Este→Oeste (Y=325)",
+                    _ => "desconocido"
+                };
+            }
+            else
+            {
+                nombreCarril = carril switch
+                {
+                    0 => "Norte (X=275)",
+                    1 => "Sur (X=325)", 
+                    2 => "Este (Y=275)",
+                    3 => "Oeste (Y=325)",
+                    _ => "desconocido"
+                };
+            }
             
             LogEvent?.Invoke(this, $"🚗 Nuevo vehículo {direccion} generado en carril {nombreCarril} ({posicion.X},{posicion.Y})");
         }

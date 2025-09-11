@@ -47,4 +47,10 @@ namespace SimuladorTrafico
         Cruzando,
         Terminado
     }
+
+    public enum TipoConfiguracionVial
+    {
+        DobleVia,    // Ida y vuelta en ambas direcciones (actual)
+        UnicaVia     // Solo Norte-Sur (↓) y Este-Oeste (←)
+    }
 }
